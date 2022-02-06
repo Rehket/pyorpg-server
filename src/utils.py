@@ -10,7 +10,5 @@ def log(msg):
 
 def decodeJSON(data):
 	'''Decodes JSON from a @data'''
-	result = json.loads(data)
-	
-	return result
+	return json.loads(data)
 

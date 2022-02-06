@@ -173,84 +173,87 @@ class DataHandler():
 
     ''' Player login '''
     def handleLogin(self, index, jsonData):
-        if not isPlaying(index):
-            if not isLoggedIn(index):
+        if not isPlaying(index) and not isLoggedIn(index):
+            plrName = jsonData[0]["name"]
+            plrPassword = jsonData[0]["password"]
 
-                plrName = jsonData[0]["name"]
-                plrPassword = jsonData[0]["password"]
+            # todo: check version
 
-                # todo: check version
+            # todo: is shutting down?
 
-                # todo: is shutting down?
+            if len(plrName) < 3 or len(plrPassword) < 3:
+                alertMsg(index, "The acount name or password is too short!")
+                return
 
-                if len(plrName) < 3 or len(plrPassword) < 3:
-                    alertMsg(index, "The acount name or password is too short!")
-                    return
-                
-                #Not necessary
-                '''if not accountExists(plrName):
+            #Not necessary
+            '''if not accountExists(plrName):
                     # alert msg
                     return'''
 
-                if not passwordOK(plrName, plrPassword):
-                    alertMsg(index, "Wrong account name or password!")
-                    return
+            if not passwordOK(plrName, plrPassword):
+                alertMsg(index, "Wrong account name or password!")
+                return
 
-                if isMultiAccounts(plrName):
-                    alertMsg(index, "That account is already logged in!")
-                    g.conn.closeConnection(index)
+            if isMultiAccounts(plrName):
+                alertMsg(index, "That account is already logged in!")
+                g.conn.closeConnection(index)
 
-                    return
+                return
 
-                # load the player
-                loadPlayer(index, plrName)
-                sendChars(index)
+            # load the player
+            loadPlayer(index, plrName)
+            sendChars(index)
 
-                g.connectionLogger.info(getPlayerLogin(index) + ' has logged in')
+            g.connectionLogger.info(getPlayerLogin(index) + ' has logged in')
 
     ''' player creates a new character '''
     def handleAddChar(self, index, jsonData):
-        if not isPlaying(index):
-            name = jsonData[0]["name"]
-            sex = jsonData[0]["sex"]
-            Class = jsonData[0]["class"]
-            charNum = jsonData[0]["slot"]
+        if isPlaying(index):
+            return
 
-            # prevent hacking
-            if len(name) < 3:
-                alertMsg(index, 'Character name must be at least three characters in length.')
-                return
+        name = jsonData[0]["name"]
+        sex = jsonData[0]["sex"]
+        Class = jsonData[0]["class"]
+        charNum = jsonData[0]["slot"]
 
-            #todo: check for certain letters
+        # prevent hacking
+        if len(name) < 3:
+            alertMsg(index, 'Character name must be at least three characters in length.')
+            return
+
+        #todo: check for certain letters
 
 
-            if charNum < 0 or charNum > MAX_CHARS:
-                alertMsg(index, 'Invalid CharNum')
-                return
+        if charNum < 0 or charNum > MAX_CHARS:
+            alertMsg(index, 'Invalid CharNum')
+            return
 
-            #todo: check sex
+        #todo: check sex
 
-            if Class < 0 or Class > g.maxClasses:
-                alertMsg(index, 'Invalid Class')
-                return
+        if Class < 0 or Class > g.maxClasses:
+            alertMsg(index, 'Invalid Class')
+            return
 
-            # check if a character already exists in slot
-            if charExist(index, charNum):
-                alertMsg(index, 'Character already exists')
-                return
+        # check if a character already exists in slot
+        if charExist(index, charNum):
+            alertMsg(index, 'Character already exists')
+            return
 
-            # check if name is in use
-            if findChar(name):
-                alertMsg(index, 'Sorry, but that name is in use!')
-                return
+        # check if name is in use
+        if findChar(name):
+            alertMsg(index, 'Sorry, but that name is in use!')
+            return
 
-            # everything went ok, add the character
-            addChar(index, name, sex, Class, charNum)
-            g.serverLogger.info("Character " + name + " added to " + getPlayerLogin(index) + "'s account.")
-            # alertMsg(player created)
+        # everything went ok, add the character
+        addChar(index, name, sex, Class, charNum)
+        g.serverLogger.info(
+            f'Character {name} added to ' + getPlayerLogin(index) + "'s account."
+        )
 
-            # send characters to player
-            sendChars(index)
+        # alertMsg(player created)
+
+        # send characters to player
+        sendChars(index)
 
 
     ''' Player selected character '''
@@ -304,16 +307,15 @@ class DataHandler():
         msgTo = findPlayer(jsonData[0]["msgto"])
 
         # check if they are talking to themselves
-        if msgTo != index:
-            if msgTo is not None:
-                playerMsg(msgTo, getPlayerName(index) + ' tells you "' + getPlayerName(msgTo) + ', ' + msg + '"', tellColor)
-                playerMsg(index, 'You tell ' + getPlayerName(msgTo) + ', "' + msg + '"', tellColor)
+        if msgTo == index:
+            playerMsg(index, 'You cannot message yourself.', textColor.BRIGHT_RED)
 
-            else:
-                playerMsg(index, 'Player is not online.', textColor.WHITE)
+        elif msgTo is not None:
+            playerMsg(msgTo, getPlayerName(index) + ' tells you "' + getPlayerName(msgTo) + ', ' + msg + '"', tellColor)
+            playerMsg(index, 'You tell ' + getPlayerName(msgTo) + ', "' + msg + '"', tellColor)
 
         else:
-            playerMsg(index, 'You cannot message yourself.', textColor.BRIGHT_RED)
+            playerMsg(index, 'Player is not online.', textColor.WHITE)
 
     ''' Player movement '''
     def handlePlayerMove(self, index, jsonData):
@@ -409,36 +411,33 @@ class DataHandler():
                 # spell num
                 spellNum = Item[getPlayerInvItemNum(index, invNum)].data1
 
-                if spellNum != None:
-                    # make sure they are the right class
-                    if int(1 if Spell[spellNum].reqClass is None else Spell[spellNum].reqClass) - 1 == getPlayerClass(index) or Spell[n].reqClass is None:
-                        # make sure they are the right level
-                        levelReq = Spell[spellNum].reqLevel
+                if spellNum is None:
+                    playerMsg(index, 'An error occured with the spell. Please inform an admin!', textColor.WHITE)
 
-                        if levelReq <= getPlayerLevel(index):
-                            i = findOpenSpellSlot(index)
+                elif int(1 if Spell[spellNum].reqClass is None else Spell[spellNum].reqClass) - 1 == getPlayerClass(index) or Spell[n].reqClass is None:
+                    # make sure they are the right level
+                    levelReq = Spell[spellNum].reqLevel
 
-                            if i is not None:
-                                if not hasSpell(index, spellNum):
-                                    setPlayerSpell(index, i, spellNum)
-                                    takeItem(index, getPlayerInvItemNum(index, invNum), 0)
-                                    playerMsg(index, 'You study the spell carefully...', textColor.YELLOW)
-                                    playerMsg(index, 'You have learned a new spell!', textColor.WHITE)
+                    if levelReq <= getPlayerLevel(index):
+                        i = findOpenSpellSlot(index)
 
-                                else:
-                                    playerMsg(index, 'You have already learned this spell!', textColor.BRIGHT_RED)
+                        if i is None:
+                            playerMsg(index, 'You have learned all that you can learn!', textColor.BRIGHT_RED)
 
-                            else:
-                                playerMsg(index, 'You have learned all that you can learn!', textColor.BRIGHT_RED)
+                        elif not hasSpell(index, spellNum):
+                            setPlayerSpell(index, i, spellNum)
+                            takeItem(index, getPlayerInvItemNum(index, invNum), 0)
+                            playerMsg(index, 'You study the spell carefully...', textColor.YELLOW)
+                            playerMsg(index, 'You have learned a new spell!', textColor.WHITE)
 
                         else:
-                            playerMsg(index, 'You must be level ' + str(levelReq) + ' to learn this spell.', textColor.WHITE)
+                            playerMsg(index, 'You have already learned this spell!', textColor.BRIGHT_RED)
 
                     else:
-                        playerMsg(index, 'This spell can only be learned by a '+ getClassName(Spell[spellNum].reqClass) + '.', textColor.WHITE)
+                        playerMsg(index, 'You must be level ' + str(levelReq) + ' to learn this spell.', textColor.WHITE)
 
                 else:
-                    playerMsg(index, 'An error occured with the spell. Please inform an admin!', textColor.WHITE)
+                    playerMsg(index, 'This spell can only be learned by a '+ getClassName(Spell[spellNum].reqClass) + '.', textColor.WHITE)
 
             # todo: potions, keys
 
@@ -455,43 +454,52 @@ class DataHandler():
 
         # check for player
         for i in range(len(g.playersOnline)):
-            if getPlayerMap(index) == getPlayerMap(g.playersOnline[i]):
-                if getPlayerX(g.playersOnline[i]) == x and getPlayerY(g.playersOnline[i]) == y:
-                    # consider the player
-                    if g.playersOnline[i] != index:
+            if (
+                getPlayerMap(index) == getPlayerMap(g.playersOnline[i])
+                and getPlayerX(g.playersOnline[i]) == x
+                and getPlayerY(g.playersOnline[i]) == y
+                and g.playersOnline[i] != index
+            ):
+                if getPlayerLevel(g.playersOnline[i]) >= getPlayerLevel(index) + 5:
+                    playerMsg(index, 'You wouldn\'t stand a chance.', textColor.BRIGHT_RED)
 
-                        if getPlayerLevel(g.playersOnline[i]) >= getPlayerLevel(index) + 5:
-                            playerMsg(index, 'You wouldn\'t stand a chance.', textColor.BRIGHT_RED)
+                elif getPlayerLevel(g.playersOnline[i]) > getPlayerLevel(index):
+                        playerMsg(index, 'This one seems to have an advantage over you.', textColor.YELLOW)
 
-                        elif getPlayerLevel(g.playersOnline[i]) > getPlayerLevel(index):
-                                playerMsg(index, 'This one seems to have an advantage over you.', textColor.YELLOW)
+                elif getPlayerLevel(g.playersOnline[i]) == getPlayerLevel(index):
+                        playerMsg(index, 'This would be an even fight.', textColor.WHITE)
 
-                        elif getPlayerLevel(g.playersOnline[i]) == getPlayerLevel(index):
-                                playerMsg(index, 'This would be an even fight.', textColor.WHITE)
+                elif getPlayerLevel(g.playersOnline[i]) + 5 <= getPlayerLevel(index):
+                        playerMsg(index, 'You could slaughter that player.', textColor.BRIGHT_BLUE)
 
-                        elif getPlayerLevel(g.playersOnline[i]) + 5 <= getPlayerLevel(index):
-                                playerMsg(index, 'You could slaughter that player.', textColor.BRIGHT_BLUE)
-
-                        elif getPlayerLevel(g.playersOnline[i]) < getPlayerLevel(index):
-                                playerMsg(index, 'You would have an advantage over that player.', textColor.YELLOW)
+                elif getPlayerLevel(g.playersOnline[i]) < getPlayerLevel(index):
+                        playerMsg(index, 'You would have an advantage over that player.', textColor.YELLOW)
 
 
 
-                        # change the target
-                        TempPlayer[index].target = g.playersOnline[i]
-                        TempPlayer[index].targetType = TARGET_TYPE_PLAYER
-                        playerMsg(index, 'Your target is now ' + getPlayerName(g.playersOnline[i]) + '.', textColor.YELLOW)
-                        return
+                # change the target
+                TempPlayer[index].target = g.playersOnline[i]
+                TempPlayer[index].targetType = TARGET_TYPE_PLAYER
+                playerMsg(index, 'Your target is now ' + getPlayerName(g.playersOnline[i]) + '.', textColor.YELLOW)
+                return
 
         # check for npc
         for i in range(MAX_MAP_NPCS):
-            if mapNPC[getPlayerMap(index)][i].num is not None:
-                if mapNPC[getPlayerMap(index)][i].x == x and mapNPC[getPlayerMap(index)][i].y == y:
-                    # change the target
-                    TempPlayer[index].target = i
-                    TempPlayer[index].targetType = TARGET_TYPE_NPC
-                    playerMsg(index, 'Your target is now a ' + NPC[mapNPC[getPlayerMap(index)][i].num].name + '.', textColor.YELLOW)
-                    return
+            if (
+                mapNPC[getPlayerMap(index)][i].num is not None
+                and mapNPC[getPlayerMap(index)][i].x == x
+                and mapNPC[getPlayerMap(index)][i].y == y
+            ):
+                # change the target
+                TempPlayer[index].target = i
+                TempPlayer[index].targetType = TARGET_TYPE_NPC
+                playerMsg(
+                    index,
+                    f'Your target is now a {NPC[mapNPC[getPlayerMap(index)][i].num].name}.',
+                    textColor.YELLOW,
+                )
+
+                return
 
 
 
@@ -501,31 +509,36 @@ class DataHandler():
             tempIndex = g.playersOnline[i]
 
             # make sure we dont attack ourselves
-            if tempIndex != index:
-                # can we attack the player?
-                if canAttackPlayer(index, tempIndex):
+            if tempIndex != index and canAttackPlayer(index, tempIndex):
                     # check if player can block the hit
-                    if not canPlayerBlockHit(tempIndex):
+                if not canPlayerBlockHit(tempIndex):
 
-                        # get the damage we can do
-                        if not canPlayerCriticalHit(index):
-                            # normal hit
-                            damage = getPlayerDamage(index) - getPlayerProtection(tempIndex)
-
-                        else:
-                            # critical hit so add bonus
-                            n = getPlayerDamage(index)
-                            damage = n + random.randint(1, (n // 2)) + 1 - getPlayerProtection(tempIndex)
-
-                            playerMsg(index, 'You feel a surge of energy upon swinging!', textColor.BRIGHT_CYAN)
-                            playerMsg(tempIndex, getPlayerName(index) + ' swings with enormous might!', textColor.BRIGHT_CYAN)
-
-                        attackPlayer(index, tempIndex, damage)
+                    # get the damage we can do
+                    if not canPlayerCriticalHit(index):
+                        # normal hit
+                        damage = getPlayerDamage(index) - getPlayerProtection(tempIndex)
 
                     else:
-                        # player has blocked the hit
-                        playerMsg(index, getPlayerName(tempIndex) + '\'s ' + Item[getPlayerInvItemNum(tempIndex, getPlayerEquipmentSlot(tempIndex, Equipment.shield))].name + ' has blocked your hit!', textColor.BRIGHT_CYAN)
-                        playerMsg(tempIndex, 'Your ' + Item[getPlayerInvItemNum(tempIndex, getPlayerEquipmentSlot(tempIndex, Equipment.shield))].name + ' has blocked ' + getPlayerName(index) + '\'s hit!', textColor.BRIGHT_CYAN)
+                        # critical hit so add bonus
+                        n = getPlayerDamage(index)
+                        damage = n + random.randint(1, (n // 2)) + 1 - getPlayerProtection(tempIndex)
+
+                        playerMsg(index, 'You feel a surge of energy upon swinging!', textColor.BRIGHT_CYAN)
+                        playerMsg(tempIndex, getPlayerName(index) + ' swings with enormous might!', textColor.BRIGHT_CYAN)
+
+                    attackPlayer(index, tempIndex, damage)
+
+                else:
+                    # player has blocked the hit
+                    playerMsg(index, getPlayerName(tempIndex) + '\'s ' + Item[getPlayerInvItemNum(tempIndex, getPlayerEquipmentSlot(tempIndex, Equipment.shield))].name + ' has blocked your hit!', textColor.BRIGHT_CYAN)
+                    playerMsg(
+                        tempIndex,
+                        f'Your {Item[getPlayerInvItemNum(tempIndex, getPlayerEquipmentSlot(tempIndex, Equipment.shield))].name} has blocked '
+                        + getPlayerName(index)
+                        + '\'s hit!',
+                        textColor.BRIGHT_CYAN,
+                    )
+
 
         # todo: handle attack npc
         for i in range(MAX_MAP_NPCS):
@@ -542,7 +555,7 @@ class DataHandler():
 
                 if damage > 0:
                     attackNpc(index, i, damage)
-                    
+
                 else:
                     playerMsg(index, 'Your attack does nothing.', textColor.BRIGHT_RED)
 
@@ -555,7 +568,12 @@ class DataHandler():
         i = findPlayer(name)
 
         if i != None:
-            playerMsg(index, 'Account: ' + Player[i].Login + ', Name: ' + getPlayerName(i), textColor.BRIGHT_GREEN)
+            playerMsg(
+                index,
+                f'Account: {Player[i].Login}, Name: ' + getPlayerName(i),
+                textColor.BRIGHT_GREEN,
+            )
+
 
             if getPlayerAccess(index) > ADMIN_MONITOR:
                 playerMsg(index, '-=- Stats for ' + getPlayerName(i) + ' -=-', textColor.BRIGHT_GREEN)
@@ -566,12 +584,8 @@ class DataHandler():
                 n = (getPlayerStat(i, Stats.strength) // 2) + (getPlayerLevel(i) // 2)
                 k = (getPlayerStat(i, Stats.defense) // 2) + (getPlayerLevel(i) // 2)
 
-                if n > 100:
-                    n = 100
-
-                if k > 100:
-                    k = 100
-
+                n = min(n, 100)
+                k = min(k, 100)
                 playerMsg(index, 'Critical Hit Chance: ' + str(n) + '%, Block Chance: ' + str(k) + '%', textColor.BRIGHT_GREEN)
         else:
             playerMsg(index, 'Player is not online.', textColor.WHITE)
@@ -718,9 +732,8 @@ class DataHandler():
         for i in range(g.totalPlayersOnline):
             index = g.playersOnline[i]
 
-            if isPlaying(index):
-                if getPlayerMap(index) == mapNum:
-                    playerWarp(index, mapNum, getPlayerX(index), getPlayerY(index))
+            if isPlaying(index) and getPlayerMap(index) == mapNum:
+                playerWarp(index, mapNum, getPlayerX(index), getPlayerY(index))
 
 
     def handleNeedMap(self, index, jsonData):
@@ -764,7 +777,7 @@ class DataHandler():
                 tMapEnd = i + 1
 
         msg += str(tMapStart) + '-' + str(tMapEnd-1) + ', '
-        msg = msg[:-2] + '.'
+        msg = f'{msg[:-2]}.'
 
         playerMsg(index, msg, textColor.BROWN)
 
@@ -800,11 +813,12 @@ class DataHandler():
         if amount > getPlayerInvItemValue(index, invNum):
             return
 
-        if Item[getPlayerInvItemNum(index, invNum)].type == ITEM_TYPE_CURRENCY:
-            # check if money and if so, make sure it wont drop to value 0
-            if amoun <= 0:
-                # hacking attemt
-                takeItem(index, getPlayerInvItemNum(index, invNum), 0)
+        if (
+            Item[getPlayerInvItemNum(index, invNum)].type == ITEM_TYPE_CURRENCY
+            and amoun <= 0
+        ):
+            # hacking attemt
+            takeItem(index, getPlayerInvItemNum(index, invNum), 0)
 
         playerMapDropItem(index, invNum, amount)
 
@@ -848,7 +862,11 @@ class DataHandler():
         sendUpdateItemToAll(itemNum)
         saveItem(itemNum)
         g.connectionLogger.info(getPlayerName(index) + ' saved item #' + str(itemNum) + '.')
-        playerMsg(index, Item[itemNum].name + ' was saved as item #' + str(itemNum), textColor.BRIGHT_BLUE)
+        playerMsg(
+            index,
+            f'{Item[itemNum].name} was saved as item #' + str(itemNum),
+            textColor.BRIGHT_BLUE,
+        )
 
     def handleRequestEditSpell(self, index):
         if getPlayerAccess(index) < ADMIN_DEVELOPER:
@@ -952,7 +970,11 @@ class DataHandler():
         sendUpdateNpcToAll(npcNum)
         saveNpc(npcNum)
         g.connectionLogger.info(getPlayerName(index) + ' saved NPC #' + str(npcNum) + '.')
-        playerMsg(index, NPC[npcNum].name + ' was saved as NPC #' + str(npcNum), textColor.BRIGHT_BLUE)
+        playerMsg(
+            index,
+            f'{NPC[npcNum].name} was saved as NPC #' + str(npcNum),
+            textColor.BRIGHT_BLUE,
+        )
 
     def handleSetAccess(self, index, jsonData):
         if getPlayerAccess(index) < ADMIN_CREATOR:
@@ -1004,33 +1026,38 @@ class DataHandler():
             return
 
         for i in range(g.totalPlayersOnline):
-            if getPlayerMap(index) == getPlayerMap(g.playersOnline[i]):
-                if getPlayerX(g.playersOnline[i]) == x:
-                    if getPlayerY(g.playersOnline[i]) == y:
+            if (
+                getPlayerMap(index) == getPlayerMap(g.playersOnline[i])
+                and getPlayerX(g.playersOnline[i]) == x
+                and getPlayerY(g.playersOnline[i]) == y
+                and g.playersOnline[i] != index
+            ):
+                if getPlayerLevel(playersOnline[i]) >= getPlayerLevel(index) + 5:
+                    playerMsg(index, "You wouldn't stand a chance.", textColor.BRIGHT_RED)
 
-                        # consider the player
-                        if g.playersOnline[i] != index:
-                            if getPlayerLevel(playersOnline[i]) >= getPlayerLevel(index) + 5:
-                                playerMsg(index, "You wouldn't stand a chance.", textColor.BRIGHT_RED)
+                elif getPlayerLevel(playersOnline[i]) > getPlayerLevel(index):
+                    playerMsg(index, "This one seems to have an advantage over you.", textColor.YELLOW)
 
-                            elif getPlayerLevel(playersOnline[i]) > getPlayerLevel(index):
-                                playerMsg(index, "This one seems to have an advantage over you.", textColor.YELLOW)
+                elif getPlayerLevel(playersOnline[i]) == getPlayerLevel(index):
+                    playerMsg(index, "This would be an even fight.", textColor.WHITE)
 
-                            elif getPlayerLevel(playersOnline[i]) == getPlayerLevel(index):
-                                playerMsg(index, "This would be an even fight.", textColor.WHITE)
+                elif getPlayerLevel(playersOnline[i]) + 5 <= getPlayerLevel(index):
+                    playerMsg(index, "You could slaughter that player.", textColor.BRIGHT_BLUE)
 
-                            elif getPlayerLevel(playersOnline[i]) + 5 <= getPlayerLevel(index):
-                                playerMsg(index, "You could slaughter that player.", textColor.BRIGHT_BLUE)
-
-                            elif getPlayerLevel(playersOnline[i]) < getPlayerLevel(index):
-                                playerMsg(index, "You would have an advantage over that player.", textColor.YELLOW)
-
-                    # todo: change target
+                elif getPlayerLevel(playersOnline[i]) < getPlayerLevel(index):
+                    playerMsg(index, "You would have an advantage over that player.", textColor.YELLOW)
 
         for i in range(MAX_MAP_ITEMS):
-            if mapItem[getPlayerMap(index)][i].num != None:
-                if mapItem[getPlayerMap(index)][i].x == x and mapItem[getPlayerMap(index)][i].y == y:
-                    playerMsg(index, 'You see a ' + Item[mapItem[getPlayerMap(index)][i].num].name + '.', textColor.YELLOW)
+            if (
+                mapItem[getPlayerMap(index)][i].num != None
+                and mapItem[getPlayerMap(index)][i].x == x
+                and mapItem[getPlayerMap(index)][i].y == y
+            ):
+                playerMsg(
+                    index,
+                    f'You see a {Item[mapItem[getPlayerMap(index)][i].num].name}.',
+                    textColor.YELLOW,
+                )
 
 
 
