@@ -131,7 +131,7 @@ class gameServerProtocol(LineReceiver):
         decodedData = base64.b64decode(data)
 
         g.connectionLogger.debug("Received data from " + str(self.transport.getPeer().host))
-        g.connectionLogger.debug(" -> " + decodedData)
+        g.connectionLogger.debug(f' -> {decodedData}')
 
         dataHandler.handleData(clientIndex, decodedData)
 
@@ -145,18 +145,18 @@ class gameServerProtocol(LineReceiver):
         self.factory.clients[index].sendLine(encodedData)
 
     def sendDataToAll(self, data):
-        for i in range(0, len(self.factory.clients)):
+        for i in range(len(self.factory.clients)):
             self.sendDataTo(i, data)
 
     def sendDataToAllBut(self, index, data):
-        for i in range(0, len(self.factory.clients)):
+        for i in range(len(self.factory.clients)):
             if i == index:
                 continue
             else:
                 self.sendDataTo(i, data)
 
     def sendDataToMap(self, mapNum, data):
-        for i in range(0, len(self.factory.clients)):
+        for i in range(len(self.factory.clients)):
             try:
                 if getPlayerMap(g.playersOnline[i]) == mapNum:
                     self.sendDataTo(i, data)
@@ -166,9 +166,11 @@ class gameServerProtocol(LineReceiver):
 
     def sendDataToMapBut(self, mapNum, index, data):
         for i in range(g.totalPlayersOnline):
-            if getPlayerMap(g.playersOnline[i]) == mapNum:
-                if g.playersOnline[i] != index:
-                    self.sendDataTo(g.playersOnline[i], data)
+            if (
+                getPlayerMap(g.playersOnline[i]) == mapNum
+                and g.playersOnline[i] != index
+            ):
+                self.sendDataTo(g.playersOnline[i], data)
 
 
 class gameServerFactory(Factory):

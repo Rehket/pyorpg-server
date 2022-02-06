@@ -11,7 +11,7 @@ database = None
 
 def setupDatabase():
     global database
-    database = Database(g.dataFolder + "/game_db.db")
+    database = Database(f'{g.dataFolder}/game_db.db')
 
 class Database():
     def __init__(self, database):
@@ -139,7 +139,7 @@ class Database():
     def getNumberOfRows(self, tableName):
         ''' gets the number of rows in a table
             uses sql function  "SELECT COUNT(*) FROM tableName; '''
-        result = self.sendQuery("SELECT COUNT(*) FROM " + tableName + ";")
+        result = self.sendQuery(f'SELECT COUNT(*) FROM {tableName};')
         return result.fetchone()[0]
 
 
@@ -150,11 +150,7 @@ def accountExists(name):
     query = database.sendQuery("SELECT * FROM accounts WHERE username='%s';" % name)
     rows = query.fetchone()
 
-    if not rows:
-        return False
-
-    else:
-        return True
+    return bool(rows)
 
 def passwordOK(name, password):
     if accountExists(name):
@@ -228,11 +224,7 @@ def findChar(name):
     query = database.sendQuery("SELECT * FROM characters WHERE name='%s';" % name)
     rows = query.fetchone()
 
-    if rows == None:
-        return False
-
-    else:
-        return True
+    return rows is not None
 
 ###########
 # PLAYERS #
@@ -378,7 +370,7 @@ def loadPlayer(index, name):
     query = database.sendQuery("SELECT * FROM characters WHERE account_id=%i;" % accountID)
     rows = query.fetchall()
 
-    for i in range(0, MAX_CHARS):
+    for i in range(MAX_CHARS):
         try:
             Player[index].char[i].name = rows[i]['name']
             Player[index].char[i].Class = rows[i]['class']
@@ -459,7 +451,7 @@ def loadClasses():
     # get max classes
     g.maxClasses = database.getNumberOfRows("classes")
 
-    for i in range(0, g.maxClasses):
+    for i in range(g.maxClasses):
         query = database.sendQuery("SELECT * FROM classes WHERE id=%i;" % (i+1))
         rows = query.fetchone()
 
@@ -545,7 +537,7 @@ def loadItems():
     # get max classes
     itemAmount = database.getNumberOfRows('items')
 
-    for i in range(0, itemAmount):
+    for i in range(itemAmount):
         query = database.sendQuery("SELECT * FROM items WHERE id=%i;" % (i+1))
         rows = query.fetchone()
 
@@ -570,7 +562,7 @@ def saveSpell(spellNum):
     query = database.sendQuery("SELECT * FROM spells WHERE id=%i;" % (spellNum+1))
     rows = query.fetchone()
 
-    if rows == None:
+    if rows is None:
         # spell doesnt exist, create it
         query = database.sendQuery("INSERT INTO spells (id, name, pic, type, reqmp, reqclass, reqlevel, data1, data2, data3) \
                                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", \
@@ -619,7 +611,7 @@ def loadSpells():
     # get max classes
     spellAmount = database.getNumberOfRows('spells')
 
-    for i in range(0, spellAmount):
+    for i in range(spellAmount):
         query = database.sendQuery("SELECT * FROM spells WHERE id=%i;" % (i+1))
         rows = query.fetchone()
 
@@ -651,7 +643,7 @@ def saveNpc(npcNum):
     query = database.sendQuery("SELECT * FROM npcs WHERE id=%i;" % (npcNum+1))
     rows = query.fetchone()
 
-    if rows == None:
+    if rows is None:
         # npc doesnt exist, create it
         query = database.sendQuery("INSERT INTO npcs (id, name, sprite, attack_say, spawn_secs, behavior, range, drop_chance, drop_item, drop_item_value, stat_strength, stat_defense, stat_magic, stat_speed) \
                                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", \
@@ -710,7 +702,7 @@ def saveNpcs():
 def loadNpcs():
     npcAmount = database.getNumberOfRows('npcs')
 
-    for i in range(0, npcAmount):
+    for i in range(npcAmount):
         query = database.sendQuery("SELECT * FROM npcs WHERE id=%i;" % (i+1))
         rows = query.fetchone()
 
@@ -736,7 +728,9 @@ def loadNpcs():
 #################
 
 def saveMap(mapNum):
-    pickle.dump(Map[mapNum], open(g.dataFolder + "/maps/" + str(mapNum) + ".pom", 'wb'))
+    pickle.dump(
+        Map[mapNum], open(f'{g.dataFolder}/maps/' + str(mapNum) + ".pom", 'wb')
+    )
 
 def saveMaps():
     for i in range(MAX_MAPS):
@@ -746,11 +740,11 @@ def loadMaps():
     checkMaps()
 
     for i in range(MAX_MAPS):
-        Map[i] = pickle.load(open(g.dataFolder + "/maps/" + str(i) + ".pom", 'rb'))
+        Map[i] = pickle.load(open(f'{g.dataFolder}/maps/' + str(i) + ".pom", 'rb'))
 
 def checkMaps():
     for i in range(MAX_MAPS):
-        if not os.path.isfile(g.dataFolder + "/maps/" + str(i) + ".pom"):
+        if not os.path.isfile(f'{g.dataFolder}/maps/' + str(i) + ".pom"):
             saveMap(i)
 
 

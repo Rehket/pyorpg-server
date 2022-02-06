@@ -46,7 +46,7 @@ class PlayerClass():
         self.pk = 0
 
         # stats
-        self.stats = [None for i in range(Stats.stat_count)]
+        self.stats = [None for _ in range(Stats.stat_count)]
         self.stats[Stats.strength] = 0
         self.stats[Stats.defense] = 0
         self.stats[Stats.speed] = 0
@@ -54,17 +54,17 @@ class PlayerClass():
         self.statsPoints = 0
 
         # vitals (hp, mp etc.)
-        self.vitals = [None for i in range(Vitals.vital_count)]
+        self.vitals = [None for _ in range(Vitals.vital_count)]
         self.vitals[Vitals.hp] = 0
         self.vitals[Vitals.mp] = 0
         self.vitals[Vitals.sp] = 0
 
         # equipment
-        self.equipment = [None for i in range(Equipment.equipment_count)]
+        self.equipment = [None for _ in range(Equipment.equipment_count)]
 
         # inventory
-        self.inv = [PlayerInvClass() for i in range(MAX_INV)]
-        self.spell = [None for i in range(MAX_PLAYER_SPELLS)]
+        self.inv = [PlayerInvClass() for _ in range(MAX_INV)]
+        self.spell = [None for _ in range(MAX_PLAYER_SPELLS)]
 
         # Position
         self.Map = 1    # None
@@ -79,13 +79,13 @@ class AccountClass():
         self.Password = None
 
         # Characters
-        self.char = [PlayerClass() for i in range(10)]
+        self.char = [PlayerClass() for _ in range(10)]
 
 class ClassClass():
     def __init__(self):
         self.name = ""
         self.sprite = 1
-        self.stat = [None for i in range(Stats.stat_count)]
+        self.stat = [None for _ in range(Stats.stat_count)]
 
 
 class TempPlayerClass():
@@ -140,7 +140,7 @@ class MapClass():
         self.bootY = 0
 
         self.tile = [[TileClass() for i in range(MAX_MAPY)] for i in range(MAX_MAPX)]
-        self.npc = [None for i in range(MAX_MAP_NPCS)]
+        self.npc = [None for _ in range(MAX_MAP_NPCS)]
 
 class TempTileClass():
     def __init__(self):
@@ -193,14 +193,14 @@ class NPCClass():
         self.dropItem = 0
         self.dropItemValue = 0
 
-        self.stat = [None for i in range(Stats.stat_count)]
+        self.stat = [None for _ in range(Stats.stat_count)]
 
 class MapNPCClass():
     def __init__(self):
         self.num = None
         self.target = None
 
-        self.vital = [None for i in range(Vitals.vital_count)]
+        self.vital = [None for _ in range(Vitals.vital_count)]
 
         self.map = None
         self.x = None
@@ -225,23 +225,29 @@ class ShopClass():
         self.joinSay = ''
         self.leaveSay = ''
         self.fixesItems = False
-        self.tradeItem = [TradeItemClass() for i in range(MAX_TRADES)]
+        self.tradeItem = [TradeItemClass() for _ in range(MAX_TRADES)]
 
 
 
 # Data initializations
-Map = [MapClass() for i in range(MAX_MAPS)]
+Map = [MapClass() for _ in range(MAX_MAPS)]
 MapCache = [None] * MAX_MAPS
-TempTile = [TempTileClass() for i in range(MAX_MAPS)]
+TempTile = [TempTileClass() for _ in range(MAX_MAPS)]
 playersOnMap = [None] * MAX_MAPS
 
-Player = [AccountClass() for i in range(MAX_PLAYERS)]
+Player = [AccountClass() for _ in range(MAX_PLAYERS)]
 TempPlayer = [TempPlayerClass() for i in range(MAX_PLAYERS)]
 
 Class = [ClassClass() for i in range(99)]  # todo: dont use a fixed size, please
 Item = [ItemClass() for i in range(MAX_ITEMS)]
-Spell = [SpellClass() for i in range(MAX_SPELLS)]
-NPC = [NPCClass() for i in range(MAX_NPCS)]
-mapItem = [[MapItemClass() for i in range(MAX_MAP_ITEMS)] for j in range(MAX_MAPS)]
-mapNPC = [[MapNPCClass() for i in range(MAX_MAP_NPCS)] for j in range(MAX_MAPS)]
-Shop = [ShopClass() for i in range(MAX_SHOPS)]
+Spell = [SpellClass() for _ in range(MAX_SPELLS)]
+NPC = [NPCClass() for _ in range(MAX_NPCS)]
+mapItem = [
+    [MapItemClass() for _ in range(MAX_MAP_ITEMS)] for j in range(MAX_MAPS)
+]
+
+mapNPC = [
+    [MapNPCClass() for _ in range(MAX_MAP_NPCS)] for j in range(MAX_MAPS)
+]
+
+Shop = [ShopClass() for _ in range(MAX_SHOPS)]

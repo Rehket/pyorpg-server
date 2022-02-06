@@ -20,7 +20,7 @@ def canAttackPlayer(attacker, victim):
         return False
 
     # make sure they are on the same map
-    if not getPlayerMap(attacker) == getPlayerMap(victim):
+    if getPlayerMap(attacker) != getPlayerMap(victim):
         return False
 
     # make sure we dont attack the player if they are switching maps
@@ -32,16 +32,24 @@ def canAttackPlayer(attacker, victim):
     attackDir = getPlayerDir(attacker)
 
     if attackDir == DIR_UP:
-        if not ((getPlayerY(victim) + 1 == getPlayerY(attacker)) and (getPlayerX(victim) == getPlayerX(attacker))):
+        if getPlayerY(victim) + 1 != getPlayerY(attacker) or getPlayerX(
+            victim
+        ) != getPlayerX(attacker):
             return False
     elif attackDir == DIR_DOWN:
-        if not ((getPlayerY(victim) - 1 == getPlayerY(attacker)) and (getPlayerX(victim) == getPlayerX(attacker))):
+        if getPlayerY(victim) - 1 != getPlayerY(attacker) or getPlayerX(
+            victim
+        ) != getPlayerX(attacker):
             return False
     elif attackDir == DIR_LEFT:
-        if not ((getPlayerY(victim) == getPlayerY(attacker)) and (getPlayerX(victim) + 1 == getPlayerX(attacker))):
+        if getPlayerY(victim) != getPlayerY(attacker) or getPlayerX(
+            victim
+        ) + 1 != getPlayerX(attacker):
             return False
     elif attackDir == DIR_RIGHT:
-        if not ((getPlayerY(victim) == getPlayerY(attacker)) and (getPlayerX(victim) - 1 == getPlayerX(attacker))):
+        if getPlayerY(victim) != getPlayerY(attacker) or getPlayerX(
+            victim
+        ) - 1 != getPlayerX(attacker):
             return False
 
     # check if map is attackable
@@ -101,19 +109,24 @@ def attackPlayer(attacker, victim, damage):
         # calculate exp
         exp = getPlayerExp(victim) // 10
 
-        if exp < 0:
-            exp = 0
-
+        exp = max(exp, 0)
         if exp == 0:
             playerMsg(victim, 'You lost no experience points.', textColor.BRIGHT_RED)
             playerMsg(attacker, 'You received no experience points from that weak insignificant player.', textColor.BRIGHT_BLUE)
 
         else:
             setPlayerExp(victim, getPlayerExp(victim) - exp)
-            playerMsg(victim, 'You lost ' + exp + 'experience points.', textColor.BRIGHT_RED)
+            playerMsg(victim, f'You lost {exp}experience points.', textColor.BRIGHT_RED)
 
             setPlayerExp(attacker, getPlayerExp(attacker) + exp)
-            playerMsg(attacker, 'You gained ' + exp + 'experience points for killing ' + getPlayerName(victim) + '.', textColor.BRIGHT_RED)
+            playerMsg(
+                attacker,
+                f'You gained {exp}experience points for killing '
+                + getPlayerName(victim)
+                + '.',
+                textColor.BRIGHT_RED,
+            )
+
 
         # check for level up
         checkPlayerLevelUp(attacker)
@@ -156,10 +169,9 @@ def playerMove(index, direction, movement):
                 packet = json.dumps([{"packet": ServerPackets.SPlayerMove, "index": index, "x": getPlayerX(index), "y": getPlayerY(index), "direction": getPlayerDir(index), "moving": movement}])
                 g.conn.sendDataToAllBut(index, packet)
                 moved = True
-        else:
-            if Map[getPlayerMap(index)].up > 0:
-                playerWarp(index, Map[getPlayerMap(index)].up, getPlayerX(index), MAX_MAPY - 1)  # todo, dont use -1
-                moved = True
+        elif Map[getPlayerMap(index)].up > 0:
+            playerWarp(index, Map[getPlayerMap(index)].up, getPlayerX(index), MAX_MAPY - 1)  # todo, dont use -1
+            moved = True
 
     elif direction == DIR_DOWN:
         if getPlayerY(index) < MAX_MAPY-1:
@@ -170,10 +182,9 @@ def playerMove(index, direction, movement):
                 g.conn.sendDataToAllBut(index, packet)
                 moved = True
 
-        else:
-            if Map[getPlayerMap(index)].down > 0:
-                playerWarp(index, Map[getPlayerMap(index)].down, getPlayerX(index), 0)
-                moved = True
+        elif Map[getPlayerMap(index)].down > 0:
+            playerWarp(index, Map[getPlayerMap(index)].down, getPlayerX(index), 0)
+            moved = True
 
     elif direction == DIR_LEFT:
         if getPlayerX(index) > 0:
@@ -184,10 +195,9 @@ def playerMove(index, direction, movement):
                 g.conn.sendDataToAllBut(index, packet)
                 moved = True
 
-        else:
-            if Map[getPlayerMap(index)].left > 0:
-                playerWarp(index, Map[getPlayerMap(index)].left, MAX_MAPX-1, getPlayerY(index)) # todo, dont use -1
-                moved = True
+        elif Map[getPlayerMap(index)].left > 0:
+            playerWarp(index, Map[getPlayerMap(index)].left, MAX_MAPX-1, getPlayerY(index)) # todo, dont use -1
+            moved = True
 
     elif direction == DIR_RIGHT:
         if getPlayerX(index) < MAX_MAPX-1:
@@ -198,10 +208,9 @@ def playerMove(index, direction, movement):
                 g.conn.sendDataToAllBut(index, packet)
                 moved = True
 
-        else:
-            if Map[getPlayerMap(index)].right > 0:
-                playerWarp(index, Map[getPlayerMap(index)].right, 0, getPlayerY(index)) # todo, dont use -1
-                moved = True
+        elif Map[getPlayerMap(index)].right > 0:
+            playerWarp(index, Map[getPlayerMap(index)].right, 0, getPlayerY(index)) # todo, dont use -1
+            moved = True
 
     # check to see if the tile is a warp tile, and if so warp them
     if Map[getPlayerMap(index)].tile[getPlayerX(index)][getPlayerY(index)].type == TILE_TYPE_WARP:
@@ -212,7 +221,7 @@ def playerMove(index, direction, movement):
         playerWarp(index, mapNum, x, y)
         moved = True
 
-    if moved == False:
+    if not moved:
         hackingAttempt(index, 'Position Modification')
         g.serverLogger.info("hacking attempt (playerMove)")
 
@@ -334,19 +343,23 @@ def castSpell(index, spellSlot):
     if targetType == TARGET_TYPE_PLAYER:
         if isPlaying(n):
 
-            if getPlayerVital(index, Vitals.hp) > 0:
-                if getPlayerMap(index) == getPlayerMap(n):
-                    # check player level?
-
-                    if Map[getPlayerMap(index)].moral == MAP_MORAL_NONE:
-                        if getPlayerAccess(index) <= 0:
-                            if getPlayerAccess(n) <= 0:
-                                if n != index:
-                                    canCast = True
+            if (
+                getPlayerVital(index, Vitals.hp) > 0
+                and getPlayerMap(index) == getPlayerMap(n)
+                and Map[getPlayerMap(index)].moral == MAP_MORAL_NONE
+                and getPlayerAccess(index) <= 0
+                and getPlayerAccess(n) <= 0
+                and n != index
+            ):
+                canCast = True
 
             targetName = getPlayerName(n)
 
-            if Spell[spellNum].type == SPELL_TYPE_SUBHP or Spell[spellNum].type == SPELL_TYPE_SUBMP or Spell[spellNum].type == SPELL_TYPE_SUBSP:
+            if Spell[spellNum].type in [
+                SPELL_TYPE_SUBHP,
+                SPELL_TYPE_SUBMP,
+                SPELL_TYPE_SUBSP,
+            ]:
 
                 if canCast:
                     if Spell[spellNum].type == SPELL_TYPE_SUBHP:
@@ -368,8 +381,12 @@ def castSpell(index, spellSlot):
 
                     casted = True
 
-            elif Spell[spellNum].type == SPELL_TYPE_ADDHP or Spell[spellNum].type == SPELL_TYPE_ADDMP or Spell[spellNum].type == SPELL_TYPE_ADDSP:
-                
+            elif Spell[spellNum].type in [
+                SPELL_TYPE_ADDHP,
+                SPELL_TYPE_ADDMP,
+                SPELL_TYPE_ADDSP,
+            ]:
+
                 if getPlayerMap(index) == getPlayerMap(n):
                     canCast = True
 
@@ -389,7 +406,10 @@ def castSpell(index, spellSlot):
                     casted = True
 
     elif targetType == TARGET_TYPE_NPC:
-        if NPC[mapNPC[getPlayerMap(index)][n].num].behaviour != NPC_BEHAVIOUR_FRIENDLY and NPC[mapNPC[getPlayerMap(index)][n].num].behaviour != NPC_BEHAVIOUR_SHOPKEEPER:
+        if NPC[mapNPC[getPlayerMap(index)][n].num].behaviour not in [
+            NPC_BEHAVIOUR_FRIENDLY,
+            NPC_BEHAVIOUR_SHOPKEEPER,
+        ]:
             canCast = True
 
         targetName = NPC[mapNPC[getPlayerMap(index)][n].num].name
@@ -405,7 +425,12 @@ def castSpell(index, spellSlot):
                     attackNpc(index, n, damage)
 
                 else:
-                    playerMsg(index, 'The spell was too weak to hurt ' + targetName + '!', textColor.BRIGHT_RED)
+                    playerMsg(
+                        index,
+                        f'The spell was too weak to hurt {targetName}!',
+                        textColor.BRIGHT_RED,
+                    )
+
 
             elif Spell[spellNum].type == SPELL_TYPE_ADDMP:
                 mapNPC[getPlayerMap(index)][n].vital[Vitals.mp] += Spell[spellNum].data1
@@ -496,7 +521,7 @@ def joinGame(index):
     sendInventory(index)
     sendWornEquipment(index)
 
-    for i in range(0, Vitals.vital_count):  # vital.vital_count -1
+    for i in range(Vitals.vital_count):  # vital.vital_count -1
         sendVital(index, i)
 
     sendStats(index)
@@ -539,13 +564,15 @@ def leftGame(index):
 
 
 def findPlayer(name):
-    for i in range(g.totalPlayersOnline):
-        # dont check a name that is too small
-        if len(getPlayerName(g.playersOnline[i])) >= len(name):
-            if getPlayerName(g.playersOnline[i]).lower() == name.lower():
-                return g.playersOnline[i]
-
-    return None
+    return next(
+        (
+            g.playersOnline[i]
+            for i in range(g.totalPlayersOnline)
+            if len(getPlayerName(g.playersOnline[i])) >= len(name)
+            and getPlayerName(g.playersOnline[i]).lower() == name.lower()
+        ),
+        None,
+    )
 
 
 def findOpenMapItemSlot(mapNum):
@@ -572,23 +599,22 @@ def spawnItemSlot(mapItemSlot, itemNum, itemVal, itemDur, mapNum, x, y):
     i = mapItemSlot
 
     if i != None:
-        if itemNum <= MAX_ITEMS:
-            mapItem[mapNum][i].num = itemNum
-            mapItem[mapNum][i].value = itemVal
+        mapItem[mapNum][i].num = itemNum
+        mapItem[mapNum][i].value = itemVal
 
-            if itemNum != None:
-                if (Item[itemNum].type >= ITEM_TYPE_WEAPON) and (Item[itemNum].type <= ITEM_TYPE_SHIELD):
-                    mapItem[mapNum][i].dur = itemDur
-                else:
-                    mapItem[mapNum][i].dur = 0
+        if itemNum != None:
+            if (Item[itemNum].type >= ITEM_TYPE_WEAPON) and (Item[itemNum].type <= ITEM_TYPE_SHIELD):
+                mapItem[mapNum][i].dur = itemDur
             else:
                 mapItem[mapNum][i].dur = 0
+        else:
+            mapItem[mapNum][i].dur = 0
 
-            mapItem[mapNum][i].x = x
-            mapItem[mapNum][i].y = y
+        mapItem[mapNum][i].x = x
+        mapItem[mapNum][i].y = y
 
-            packet = json.dumps([{"packet": ServerPackets.SSpawnItem, "slot": i, "itemnum": itemNum, "itemval": itemVal, "itemdur": mapItem[mapNum][i].dur, "x": x, "y": y,}])
-            g.conn.sendDataToMap(mapNum, packet)
+        packet = json.dumps([{"packet": ServerPackets.SSpawnItem, "slot": i, "itemnum": itemNum, "itemval": itemVal, "itemdur": mapItem[mapNum][i].dur, "x": x, "y": y,}])
+        g.conn.sendDataToMap(mapNum, packet)
 
 def spawnMapItems(mapNum):
     if mapNum is None or mapNum > MAX_MAPS:
